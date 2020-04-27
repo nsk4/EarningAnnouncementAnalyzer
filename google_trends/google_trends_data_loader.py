@@ -3,7 +3,7 @@ import os
 
 def extract_company_data():
     trend_data = {}
-    directory = "samples/trends/"
+    directory = "../samples/trends/"
     for filename in os.listdir(directory):
         with open(directory + filename, "r") as ins:
             next(ins)  # skip category row
@@ -20,3 +20,11 @@ def extract_company_data():
                 row_splits = line.strip('\n').split(',')
                 trend_data[ticker][row_splits[0]] = int(row_splits[1])
     return trend_data
+
+
+def get_data(load_cached):
+    if load_cached:
+        # TODO: store trends in a calculated file
+        raise Exception("Not yet implemented")
+    else:
+        return extract_company_data()

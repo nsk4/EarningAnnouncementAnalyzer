@@ -50,14 +50,22 @@ STORE_CACHE = True  # store calculated ML tables
 USE_CACHED_DATA = True  # read previously calculated ML tables - TODO: set to False for run reset
 
 # Used by main.py
-PROCESS_EARNING_ANNOUNCEMENTS = False
-PROCESS_DIVIDEND_ANNOUNCEMENTS = False
+
+
 PROCESS_TWEETS = False
-USE_CACHED_TWEETS_DATA = False
-RUN_SIMULATION = False
 PROCESS_GOOGLE_TRENDS = False
+PROCESS_HISTORICAL_PRICES = True
+PROCESS_DIVIDEND_ANNOUNCEMENTS = False
+PROCESS_EARNING_ANNOUNCEMENTS = True
+
+USE_CACHED_TWEETS_DATA = False
+USE_CACHED_GOOGLE_TRENDS = False
+USE_CACHED_HISTORICAL_PRICES = True
+USE_CACHED_DIVIDEND_DATA = True
+USE_CACHED_EARNING_ANNOUNCEMENTS = True
+
+RUN_SIMULATION = False
 RUN_MACHINE_LEARNING = True
 
-DO_BASIC_PROCESSING = False  # reads company data - TODO: set to True for run reset
 READ_DATA = True  # use precalculated ML tables - TODO: set to False for run reset
 STORE_DATA = True  # store calculated tables

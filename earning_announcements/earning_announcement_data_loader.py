@@ -1,34 +1,49 @@
 import os
+import csv
+from earning_announcements import earning_prediction
 from time import strptime
-from dateutil import parser
-
-import constants
 
 
-def read_data():
-    # 1.1 price history
-    historical_prices = {}
-    directory = "samples/historical prices/"
-    for filename in os.listdir(directory):
-        ticker = filename.strip(".txt")
-        historical_prices[ticker] = {}
-        with open(directory+filename, "r") as ins:
-            next(ins)  # skip header row
-            for line in ins:
-                if line == "timestamp,open,high,low,close,adjusted_close,volume,dividend_amount,split_coefficient\n":
-                    break
-                row_splits = line.strip('\n').split(',')
-                if len(row_splits) < 6:
-                    print("Error parsing", ticker)
-                    continue
-                historical_prices[ticker][row_splits[0]] = (float(row_splits[6]),
-                                                            float(row_splits[2]),
-                                                            float(row_splits[3]),
-                                                            float(row_splits[1]),
-                                                            float(row_splits[4]),
-                                                            float(row_splits[5]))
+def get_data(load_cached):
+    if load_cached:
+        return read_old_data()
+        #old_data = merge_old_data(read_old_data())
+        #new_data = read_new_data()
+        ## TODO: merge these two together
+    else:
+        # TODO: read from file
+        pass
 
-    # 1.2 earning announcement times (old times)
+
+def process_earning_announcements(historical_prices,
+                                  earning_announcement_times,
+                                  earning_announcement_data,
+                                  company_sentiment,
+                                  trends,
+                                  store_processed_data):
+    x_table, y_table = earning_prediction.earning_data_to_feature_vectors(historical_prices,
+                                                                          earning_announcement_times,
+                                                                          earning_announcement_data,
+                                                                          company_sentiment,
+                                                                          trends)
+
+    if store_processed_data:  # 3. store earning announcement data
+        with open("models/x_data_earning.csv", "w", newline='') as my_csv:
+            writer = csv.writer(my_csv)
+            writer.writerows([["f1", "f2", "f3", "f4", "f5", "f6", "f7", "f8", "f9", "f10", "f11", "f12", "f13",
+                               "f14", "f15", "f16", "f17", "f18", "t1", "t2", "t3", "t4", "g1", "g2", "g3", "g4"]])
+            writer.writerows(x_table)
+
+        with open("models/y_data_earning.csv", "w", newline='') as my_csv:
+            writer = csv.writer(my_csv)
+            writer.writerows([["jump"]])
+            writer.writerows(y_table)
+
+    return x_table, y_table
+
+
+def read_old_data():
+    # Earning announcement times (old times)
     earning_announcement_times = {}
     with open("samples/earning_announcement_time_data.txt", "r") as ins:
         next(ins)  # skip header row
@@ -38,19 +53,19 @@ def read_data():
                 earning_announcement_times[row_splits[1]] = {}
             earning_announcement_times[row_splits[1]][row_splits[0]] = row_splits[2]
 
-    # 1.3 earning announcement data (old data)
+    # Earning announcement data (old data)
     earning_announcement_data = {}
     directory = "samples/earning announcement data/"
     for filename in os.listdir(directory):
         date = filename.strip(".txt")
-        with open(directory+filename, "r") as ins:
+        with open(directory + filename, "r") as ins:
             next(ins)  # skip header row
             for line in ins:
                 if line == "company_name,market_cap,reported_date,fiscal_quarter_ending,consensus_eps_forecast," \
                            "num_of_ests,eps,surprise_percentage\n":
                     break
                 row_splits = line.strip('\n').split(',')
-                ticker = row_splits[0][row_splits[0].find('(')+1:row_splits[0].find(')')]
+                ticker = row_splits[0][row_splits[0].find('(') + 1:row_splits[0].find(')')]
                 name = row_splits[0][:row_splits[0].find('(')]
                 fiscal_year_end = strptime(row_splits[3][:3], '%b').tm_mon  # NOTE: changed from original research paper
                 num_est = row_splits[5]
@@ -92,12 +107,14 @@ def read_data():
                                                            num_est,
                                                            eps,
                                                            surprise_percentage)
+    return earning_announcement_times, earning_announcement_data
 
-    # 1.5 Merge old earning announcement times and data
+def merge_old_data(earning_announcement_times, earning_announcement_data):
+    # TODO: merge these two together
+    return None
 
-
-    # 1.6 earning announcements (new data)
-    new_earning_announcement_data = {}
+def read_new_data():
+    earning_announcement_data = {}
     directory = "samples/new earning announcement data/"
     for filename in os.listdir(directory):
         date = filename.strip(".txt")
@@ -129,34 +146,7 @@ def read_data():
                 else:
                     surprise_percentage = float(row_splits[6])
 
-                if ticker not in new_earning_announcement_data:
-                    new_earning_announcement_data[ticker] = {}
-                new_earning_announcement_data[ticker][date] = (ticker,
-                                                               date,
-                                                               time,
-                                                               est_eps,
-                                                               eps,
-                                                               surprise_percentage)
-
-    # 1.7 dividend data
-    dividend_data = {}
-    directory = "samples/dividend declarations/"
-    for filename in os.listdir(directory):
-        ticker = filename.strip(".txt")
-        with open(directory + filename, "r") as ins:
-            next(ins)  # skip header row
-            for line in ins:
-                row_splits = line.strip('\n').split(',')
-                if row_splits[constants.EXDATE] == "--" or row_splits[constants.DECLARATION_DATE] == "--":
-                    continue
-
-                if ticker not in dividend_data:
-                    dividend_data[ticker] = {}
-                exdate = (parser.parse(row_splits[constants.EXDATE])).strftime("%Y-%m-%d")
-                declaration_date = (parser.parse(row_splits[constants.DECLARATION_DATE])).strftime("%Y-%m-%d")
-                #if exdate == declaration_date:
-                #    # This dividend is invalid for our analysis
-                #    continue
-                dividend_data[ticker][exdate] = (float(row_splits[constants.CASH_AMOUNT]), declaration_date)
-
-    return historical_prices, earning_announcement_times, earning_announcement_data, dividend_data
+                if ticker not in earning_announcement_data:
+                    earning_announcement_data[ticker] = {}
+                earning_announcement_data[ticker][date] = (ticker, date, time, est_eps, eps, surprise_percentage)
+    return earning_announcement_data

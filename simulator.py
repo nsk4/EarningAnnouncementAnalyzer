@@ -1,6 +1,20 @@
 import constants
-import earning_prediction
+from earning_announcements import earning_prediction
 import utilities
+import csv
+
+
+def run_simulation(historical_prices, earning_announcement_times, earning_announcement_data, company_sentiment, trends):
+    # result = run_simulation(historical_prices, earning_announcement_times, earning_announcement_data)
+    # print("Final result:", result)
+    trades = prepare_simulation_data(historical_prices, earning_announcement_times,
+                                               earning_announcement_data, company_sentiment, trends)
+    with open("models/simulation_data.csv", "w", newline='') as my_csv:
+        writer = csv.writer(my_csv)
+        writer.writerows([["f1", "f2", "f3", "f4", "f5", "f6", "f7", "f8", "f9", "f10", "f11", "f12", "f13",
+                           "f14", "f15", "f16", "f17", "f18", "t1", "t2", "t3", "t4", "g1", "g2", "g3", "g4",
+                           "profit_buy", "profit_buy_percentage"]])
+        writer.writerows(trades)
 
 
 def do_all_processing(historical_prices, earning_announcement_times, earning_announcement_data, company_sentiment, trends):

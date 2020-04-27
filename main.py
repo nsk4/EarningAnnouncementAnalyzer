@@ -1,12 +1,10 @@
 import csv
-import json
-
-from scripts.google_trend_extractor import extract_company_data
-import dividend_prediction
-import earning_prediction
+from earning_announcements import earning_announcement_data_loader
+from dividend_declarations import dividend_declaration_data_loader
+from historical_prices import historical_prices_data_loader
+from google_trends import google_trends_data_loader
 import simulator
 import machine_learning
-from data_reader import read_data
 import constants
 
 from twitter import twitter_data_loader
@@ -18,63 +16,35 @@ if __name__ == "__main__":
     dividend_data = {}
     company_sentiment = {}
     trends = {}
+    earning_announcements = {}
+
 
     if constants.PROCESS_TWEETS:
         company_sentiment = twitter_data_loader.get_data(constants.USE_CACHED_TWEETS_DATA)
 
     if constants.PROCESS_GOOGLE_TRENDS:
-        trends = extract_company_data()
+        trends = google_trends_data_loader.get_data(constants.USE_CACHED_GOOGLE_TRENDS)
 
-    if constants.DO_BASIC_PROCESSING:
-        historical_prices, earning_announcement_times, earning_announcement_data, dividend_data = read_data()
-        print("Done reading data.")
+    if constants.PROCESS_HISTORICAL_PRICES:
+        historical_prices = historical_prices_data_loader.get_data(constants.USE_CACHED_HISTORICAL_PRICES)
 
-        if constants.PROCESS_EARNING_ANNOUNCEMENTS:  # 2. feature vectors for earning announcements
-            x_table, y_table = earning_prediction.earning_data_to_feature_vectors(historical_prices,
-                                                                                  earning_announcement_times,
-                                                                                  earning_announcement_data,
-                                                                                  company_sentiment,
-                                                                                  trends)
+    if constants.PROCESS_DIVIDEND_ANNOUNCEMENTS:
+        dividend_data = dividend_declaration_data_loader.get_data(constants.USE_CACHED_DIVIDEND_DATA)
+        x_table, y_table = dividend_declaration_data_loader.process_dividend_announcements(historical_prices,
+                                                                                           dividend_data,
+                                                                                           constants.STORE_DATA)
 
-            if constants.STORE_DATA:  # 3. store earning announcement data
-                with open("models/x_data_earning.csv", "w", newline='') as my_csv:
-                    writer = csv.writer(my_csv)
-                    writer.writerows([["f1", "f2", "f3", "f4", "f5", "f6", "f7", "f8", "f9", "f10", "f11", "f12", "f13",
-                                       "f14", "f15", "f16", "f17", "f18", "t1", "t2", "t3", "t4", "g1", "g2", "g3", "g4"]])
-                    writer.writerows(x_table)
+    if constants.PROCESS_EARNING_ANNOUNCEMENTS:
+        earning_announcement_times, earning_announcement_data = earning_announcement_data_loader.get_data(constants.USE_CACHED_EARNING_ANNOUNCEMENTS)
+        x_table, y_table = earning_announcement_data_loader.process_earning_announcements(historical_prices,
+                                                                                          earning_announcement_times,
+                                                                                          earning_announcement_data,
+                                                                                          company_sentiment,
+                                                                                          trends,
+                                                                                          constants.STORE_DATA)
 
-                with open("models/y_data_earning.csv", "w", newline='') as my_csv:
-                    writer = csv.writer(my_csv)
-                    writer.writerows([["jump"]])
-                    writer.writerows(y_table)
-
-        if constants.PROCESS_DIVIDEND_ANNOUNCEMENTS:  # 4. feature vectors for dividends
-            x_table, y_table = dividend_prediction.dividend_data_to_feature_vectors(historical_prices, dividend_data)
-            print(x_table, y_table)
-
-            if constants.STORE_DATA:  # 5. store dividend data
-                with open("models/x_data_dividend.csv", "w", newline='') as my_csv:
-                    writer = csv.writer(my_csv)
-                    writer.writerows([["f1", "f2", "f3", "f4", "f5", "f6", "f7", "f8", "f9", "f10", "f11", "f12", "f13",
-                                       "f14", "f15", "f16"]])
-                    writer.writerows(x_table)
-
-                with open("models/y_data_dividend.csv", "w", newline='') as my_csv:
-                    writer = csv.writer(my_csv)
-                    writer.writerows([["jump"]])
-                    writer.writerows(y_table)
-
-        if constants.RUN_SIMULATION:
-            # result = simulator.run_simulation(historical_prices, earning_announcement_times, earning_announcement_data)
-            # print("Final result:", result)
-            trades = simulator.prepare_simulation_data(historical_prices, earning_announcement_times,
-                                                       earning_announcement_data, company_sentiment, trends)
-            with open("models/simulation_data.csv", "w", newline='') as my_csv:
-                writer = csv.writer(my_csv)
-                writer.writerows([["f1", "f2", "f3", "f4", "f5", "f6", "f7", "f8", "f9", "f10", "f11", "f12", "f13",
-                                   "f14", "f15", "f16", "f17", "f18", "t1", "t2", "t3", "t4", "g1", "g2", "g3", "g4",
-                                   "profit_buy", "profit_buy_percentage"]])
-                writer.writerows(trades)
+    if constants.RUN_SIMULATION:
+        simulator.run_simulation(historical_prices, earning_announcement_times, earning_announcement_data, company_sentiment, trends)
 
     if constants.RUN_MACHINE_LEARNING:
         if constants.READ_DATA:
