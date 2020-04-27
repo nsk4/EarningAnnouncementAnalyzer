@@ -1,0 +1,75 @@
+https://trends.google.com/trends/explore?date=2019-01-01%202019-12-31&q=goog
+
+Time selector
+$x("//*[@track=\"['Explore', 'Time picker', 'click']\"]")[0].click()
+
+Custom time range
+$x("//*[@class='custom-date-picker-select-option md-ink-ripple']").slice(-1)[0].click()
+
+Click year dropdown
+$x("//*[@ng-model='ctrl.fullYear']")[0].click()
+
+Select year (2019->2014)
+$x("//*[@ng-value='year' and @value='2019']")[0].click() // 2019
+$x("//*[@ng-value='year' and @value='2018']")[1].click() // 2018
+$x("//*[@ng-value='year' and @value='2017']")[2].click() // 2017
+$x("//*[@ng-value='year' and @value='2016']")[3].click() // 2016
+$x("//*[@ng-value='year' and @value='2015']")[4].click() // 2015
+$x("//*[@ng-value='year' and @value='2014']")[5].click() // 2014
+
+Click ok
+$x("//*[@ng-click='ctrl.mdDialog.hide(ctrl.getSelection())']")[0].click()
+
+CSV download
+$x("//*[@class='widget-actions-item-flatten'][1]/button[1]")[0].click()
+
+
+
+for(var year=2014; year<=2019; year++)
+{
+	// Time selector
+	document.evaluate("//*[@track=\"['Explore', 'Time picker', 'click']\"]", document, null, XPathResult.ORDERED_NODE_SNAPSHOT_TYPE, null).snapshotItem(0).click()
+	await new Promise(resolve => setTimeout(resolve, 1000));
+	// Custom time range
+	items = document.evaluate("//*[@class='custom-date-picker-select-option md-ink-ripple']", document, null, XPathResult.ORDERED_NODE_SNAPSHOT_TYPE, null)
+	items.snapshotItem(items.snapshotLength-1).click()
+	await new Promise(resolve => setTimeout(resolve, 1000));
+	// Click year dropdown
+	document.evaluate("//*[@ng-model='ctrl.fullYear']", document, null, XPathResult.ORDERED_NODE_SNAPSHOT_TYPE, null).snapshotItem(0).click()
+	await new Promise(resolve => setTimeout(resolve, 1000));
+	// Select year (2019->2014)
+	document.evaluate("//*[@ng-value='year' and @value='"+year+"']", document, null, XPathResult.ORDERED_NODE_SNAPSHOT_TYPE, null).snapshotItem(0).click()
+	await new Promise(resolve => setTimeout(resolve, 1000));
+	// Click ok
+	document.evaluate("//*[@ng-click='ctrl.mdDialog.hide(ctrl.getSelection())']", document, null, XPathResult.ORDERED_NODE_SNAPSHOT_TYPE, null).snapshotItem(0).click()
+	await new Promise(resolve => setTimeout(resolve, 10000));
+	// CSV download
+	document.evaluate("//*[@class='widget-actions-item-flatten'][1]/button[1]", document, null, XPathResult.ORDERED_NODE_SNAPSHOT_TYPE, null).snapshotItem(0).click()
+	await new Promise(resolve => setTimeout(resolve, 5000));
+}
+
+await new Promise(resolve => setTimeout(resolve, 30000));
+
+
+
+
+
+$x("//*[@ng-click='showSearchTermAutocompleteDialog()']")[0].click()
+
+
+
+
+$x("//*[@type='search']")[0].click()
+$x("//*[@placeholder='Add a search term']")[0].click()
+
+$x("//*[@ng-repeat='term in ctrl.model.terms']")[0].click()
+repeat="term in ctrl.model.terms
+$x("//*[@ng-repeat='term in ctrl.model.terms']")[0].innerText = "appl
+
+window.history.pushState('page2', 'Title', '/page2.php');
+
+
+https://trends.google.com/trends/explore?date=2019-01-01%202019-12-31&q=appl
+
+
+window.history.pushState("page2", "Title", "https://trends.google.com/trends/explore?date=2019-01-01%202019-12-31&q=msft")
