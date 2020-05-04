@@ -18,7 +18,6 @@ if __name__ == "__main__":
     trends = {}
     earning_announcements = {}
 
-
     if constants.PROCESS_TWEETS:
         company_sentiment = twitter_data_loader.get_data(constants.USE_CACHED_TWEETS_DATA)
 

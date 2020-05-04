@@ -58,11 +58,11 @@ def extract_rows(text):
 
             text_row = text_row.replace('<!-- /react-text -->', '')
             text_row = text_row.strip()
-            text_row = text_row.replace('TAS', '--')
-            text_row = text_row.replace('N/A', '--')
+            text_row = text_row.replace('TAS', '-')
+            text_row = text_row.replace('N/A', '-')
             text_row = text_row.replace('Before Market Open', 'bmo')
             text_row = text_row.replace('After Market Close', 'amo')
-            text_row = text_row.replace('Time Not Supplied', '--')
+            text_row = text_row.replace('Time Not Supplied', '-')
             text_row = text_row.replace('"', '')
             text_row = text_row.replace('+', '')
             text_row = text_row[0:text_row.find("<")]

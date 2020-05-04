@@ -2,16 +2,16 @@ import os
 import csv
 from earning_announcements import earning_prediction
 from time import strptime
+import utilities
 
 
 def get_data(load_cached):
     if load_cached:
-        return read_old_data()
-        #old_data = merge_old_data(read_old_data())
-        #new_data = read_new_data()
-        ## TODO: merge these two together
+        old_data = read_old_data()
+        new_data = read_new_data()
+        return {**old_data, **new_data}
     else:
-        # TODO: read from file
+        # TODO: read x and y table from file
         pass
 
 
@@ -107,11 +107,35 @@ def read_old_data():
                                                            num_est,
                                                            eps,
                                                            surprise_percentage)
-    return earning_announcement_times, earning_announcement_data
+    return merge_old_data(earning_announcement_times, earning_announcement_data)
+
+
+def get_announcement_time(date, announcement_times):
+    announcement_date = utilities.get_closest_date(date, [*announcement_times.keys()], 14)
+
+    if announcement_date is not None and announcement_times[announcement_date] == "bmo":
+        return "bmc"
+    else:
+        return "amc"
+
 
 def merge_old_data(earning_announcement_times, earning_announcement_data):
-    # TODO: merge these two together
-    return None
+    arr = {}
+    for ticker, company_data in earning_announcement_data:
+        for date, data in company_data:
+            if date not in arr:
+                arr[date] = {}
+            if ticker not in arr[date]:
+                arr[date][ticker] = {}
+
+            if ticker not in earning_announcement_times:
+                time = "amc"
+            else:
+                time = get_announcement_time(date, earning_announcement_times[ticker])
+
+            arr[date][ticker] = (data[3], data[4], data[5], time)
+    return arr
+
 
 def read_new_data():
     earning_announcement_data = {}
@@ -126,7 +150,10 @@ def read_new_data():
                 row_splits = line.strip('\n').split(',')
 
                 ticker = row_splits[0]
-                time = row_splits[2]
+                if row_splits[2] == "bmo":
+                    time = "bmo"
+                else:
+                    time = "amo"
 
                 # estimated eps
                 if row_splits[3] == "-":
