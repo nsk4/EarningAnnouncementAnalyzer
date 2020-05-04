@@ -6,16 +6,13 @@ import constants
 import utilities
 
 
-def extract_announcement_features(ticker, date, prices, earning_announcements,
-                                  earning_announcement_times, company_sentiment,
-                                  trends):
+def extract_announcement_features(ticker, date, prices, earning_announcements, company_sentiment, trends):
     """
     Create announcement feature vector with given data
     :param ticker: Corporation ticker
     :param date: Announcement date
     :param prices: Corporation stock price history
     :param earning_announcements: Corporation earning announcements
-    :param earning_announcement_times: Corporation earning announcements times
     :param company_sentiment: sentiment for all corporations
     :param trends: google trends
     :return: feature vector for given announcement event
@@ -28,41 +25,41 @@ def extract_announcement_features(ticker, date, prices, earning_announcements,
     proper_date = parser.parse(date)
 
     # 1. Surprise factor[0] > 0
-    if earning_announcement[constants.EPS] > 0:
+    if earning_announcement[constants.ANNOUNCEMENT_SURPRISE] is None:
+        announcement_features.append(None)
+    elif earning_announcement[constants.ANNOUNCEMENT_SURPRISE] > 0:
         announcement_features.append(1)
     else:
         announcement_features.append(0)
 
     # 2. EPS[0] > EPS[-1].
     if previous_announcement_date is None:
-        return None
         announcement_features.append(None)
-    elif earning_announcement[constants.EPS] > earning_announcements[previous_announcement_date][constants.EPS]:
+    elif earning_announcement[constants.ANNOUNCEMENT_EPS] > earning_announcements[previous_announcement_date][
+        constants.ANNOUNCEMENT_EPS]:
         announcement_features.append(1)
     else:
         announcement_features.append(0)
 
     # 3. EPS[-2] - 2 EPS[-1] + EPS[0] > 0.
     previous_previous_announcement_date = utilities.get_previous_date(date, all_dates, 2)
-    if previous_announcement_date is None or previous_previous_announcement_date is None:
-        return None
+    if previous_announcement_date is None or previous_previous_announcement_date:
         announcement_features.append(None)
-    elif earning_announcements[previous_previous_announcement_date][constants.EPS] \
-            - 2 * earning_announcements[previous_announcement_date][constants.EPS] + \
-            earning_announcement[constants.EPS] > 0:
+    elif earning_announcements[previous_previous_announcement_date][constants.ANNOUNCEMENT_EPS] \
+            - 2 * earning_announcements[previous_announcement_date][constants.ANNOUNCEMENT_EPS] + \
+            earning_announcement[constants.ANNOUNCEMENT_EPS] > 0:
         announcement_features.append(1)
     else:
         announcement_features.append(0)
 
     # 4. Earning Jump[-1] > 0.
     if previous_announcement_date is None:
-        return None
         announcement_features.append(None)
     else:
         jump = utilities.get_announcement_jump(previous_announcement_date, prices,
-                                               earning_announcement_times, constants.CLOSE, constants.OPEN)
+                                               earning_announcements[previous_announcement_date][
+                                                   constants.ANNOUNCEMENT_TIME])
         if jump is None:
-            return None
             announcement_features.append(None)
         elif jump > 0:
             announcement_features.append(1)
@@ -72,7 +69,6 @@ def extract_announcement_features(ticker, date, prices, earning_announcements,
     # 5. Standard deviation((High - Low) / close) / Mean((High - Low) / close) in last 90 days
     calc = utilities.price_calc(date, prices, 90)
     if calc is None:
-        return None
         announcement_features.append(None)
     else:
         announcement_features.append(statistics.stdev(calc) / statistics.mean(calc))
@@ -80,26 +76,24 @@ def extract_announcement_features(ticker, date, prices, earning_announcements,
     # 6. Standard deviation((High - Low) / close) / Mean((High - Low) / close) in last 10 days.
     calc = utilities.price_calc(date, prices, 10)
     if calc is None:
-        return None
         announcement_features.append(None)
     else:
         announcement_features.append(statistics.stdev(calc) / statistics.mean(calc))
 
     # 7. 1 Billion < Market cap < 10 Billions.
     # NOTE: Market cap is not used since new data is not supporting it
-    #if earning_announcement[constants.CAP] is None:
+    # if earning_announcement[constants.CAP] is None:
     #    return None
     #    announcement_features.append(None)
-    #elif 1000000000 < earning_announcement[constants.CAP] < 10000000000:
+    # elif 1000000000 < earning_announcement[constants.CAP] < 10000000000:
     #    announcement_features.append(1)
-    #else:
+    # else:
     #    announcement_features.append(0)
     announcement_features.append(0)
 
     # 8. Standard deviation((High - Low) / close) in last 90 days.
     calc = utilities.price_calc(date, prices, 90)
     if calc is None:
-        return None
         announcement_features.append(None)
     else:
         announcement_features.append(statistics.stdev(calc))
@@ -107,13 +101,11 @@ def extract_announcement_features(ticker, date, prices, earning_announcements,
     # 9. Earning Jump[-3] > 0.
     past_date = utilities.get_previous_date(date, all_dates, 3)
     if past_date is None:
-        return None
         announcement_features.append(None)
     else:
-        jump = utilities.get_announcement_jump(past_date, prices, earning_announcement_times,
-                                               constants.CLOSE, constants.OPEN)
+        jump = utilities.get_announcement_jump(past_date, prices,
+                                               earning_announcements[past_date][constants.ANNOUNCEMENT_TIME])
         if jump is None:
-            return None
             announcement_features.append(None)
         elif jump > 0:
             announcement_features.append(1)
@@ -123,13 +115,11 @@ def extract_announcement_features(ticker, date, prices, earning_announcements,
     # 10. Earning Jump[-2] > 0.
     past_date = utilities.get_previous_date(date, all_dates, 2)
     if past_date is None:
-        return None
         announcement_features.append(None)
     else:
-        jump = utilities.get_announcement_jump(past_date, prices, earning_announcement_times,
-                                               constants.CLOSE, constants.OPEN)
+        jump = utilities.get_announcement_jump(past_date, prices,
+                                               earning_announcements[past_date][constants.ANNOUNCEMENT_TIME])
         if jump is None:
-            return None
             announcement_features.append(None)
         elif jump > 0:
             announcement_features.append(1)
@@ -152,21 +142,18 @@ def extract_announcement_features(ticker, date, prices, earning_announcements,
     announcement_features.append(statistics.mean(utilities.data_for_calc(date, prices, constants.VOLUME, 7)))
 
     # 16. EPS > EST EPS
-    if earning_announcement[constants.EPS] is None or earning_announcement[constants.EST_EPS] is None:
-        return None
+    if earning_announcement[constants.ANNOUNCEMENT_EST_EPS] is None:
         announcement_features.append(None)
-    elif earning_announcement[constants.EPS] > earning_announcement[constants.EST_EPS]:
+    elif earning_announcement[constants.ANNOUNCEMENT_EPS] > earning_announcement[constants.ANNOUNCEMENT_EST_EPS]:
         announcement_features.append(1)
-    elif earning_announcement[constants.EPS] == earning_announcement[constants.EST_EPS]:
+    elif earning_announcement[constants.ANNOUNCEMENT_EPS] == earning_announcement[constants.ANNOUNCEMENT_EST_EPS]:
         announcement_features.append(0)
     else:
         announcement_features.append(-1)
 
-    # 17. earning jump
-    jump = utilities.get_announcement_jump(date, prices, earning_announcement_times,
-                                           constants.CLOSE, constants.OPEN, True)
+    # 17. overnight earning jump
+    jump = utilities.get_overnight_announcement_jump(date, prices, earning_announcement[constants.ANNOUNCEMENT_TIME])
     if jump is None:
-        return None
         announcement_features.append(None)
     elif jump > constants.JUMP_THRESHOLD:
         announcement_features.append(1)
@@ -175,12 +162,9 @@ def extract_announcement_features(ticker, date, prices, earning_announcements,
     else:
         announcement_features.append(0)
 
-    # 18. earning jump percentage discrete
-    jump = utilities.get_announcement_jump(date, prices,
-                                           earning_announcement_times,
-                                           constants.CLOSE, constants.OPEN, True)
+    # 18. overnight earning jump percentage discrete
+    jump = utilities.get_overnight_announcement_jump(date, prices, earning_announcement[constants.ANNOUNCEMENT_TIME])
     if jump is None:
-        return None
         announcement_features.append(None)
     else:
         announcement_features.append(utilities.get_discrete_jump(jump))
@@ -195,10 +179,12 @@ def extract_announcement_features(ticker, date, prices, earning_announcements,
 
     if company_sentiment != {}:
         # 19. average positive-negative sentiment in the past month
-        announcement_features.append(statistics.mean(utilities.get_avg_sentiment(company_sentiment["general_date_sentiment"], date, 30)))
+        announcement_features.append(
+            statistics.mean(utilities.get_avg_sentiment(company_sentiment["general_date_sentiment"], date, 30)))
 
         # 20. average positive-negative sentiment in the past week
-        announcement_features.append(statistics.mean(utilities.get_avg_sentiment(company_sentiment["general_date_sentiment"], date, 7)))
+        announcement_features.append(
+            statistics.mean(utilities.get_avg_sentiment(company_sentiment["general_date_sentiment"], date, 7)))
 
         # 21. average positive-negative sentiment in the past month for company
         announcement_features.append(statistics.mean(utilities.get_avg_sentiment(company_sentiment[ticker], date, 30)))
@@ -235,17 +221,12 @@ def extract_announcement_features(ticker, date, prices, earning_announcements,
         announcement_features.append(0)
         announcement_features.append(0)
 
-    date1, date2 = utilities.get_announcement_dates(date, prices, earning_announcement_times)
-    date3 = utilities.get_after_announcement_dates(date, prices, earning_announcement_times)
-    if date1 == date2 and date1 == date3 or date1 != date2 and date1 <= date3 < date2:
-        raise Exception("Jump dates are similar. This should not happen!", date, date1, date2, date3)
-
     return announcement_features
 
 
-def extract_announcement_result(date, prices, announcement_times):
+def extract_announcement_result(date, prices, announcement_time):
     # after announcement jump result, if CLASSIFY_RESULTS is true then this function will return an index of appropriate discrete jumps array
-    jump = utilities.get_after_announcement_jump(date, prices, announcement_times, True)
+    jump = utilities.get_after_announcement_jump(date, prices, announcement_time, True)
     if jump is None:
         return None
     elif constants.CLASSIFY_RESULTS:
@@ -258,15 +239,13 @@ def extract_announcement_result(date, prices, announcement_times):
         return 0
 
 
-def earning_data_to_feature_vectors(historical_prices, earning_announcement_times,
-                                    earning_announcement_data, company_sentiment,
-                                    trends):
+def earning_data_to_feature_vectors(historical_prices, earning_announcement_data, company_sentiment, trends):
     x_table = list()
     y_table = list()
     for ticker, earning_announcements in earning_announcement_data.items():
 
         # check if stock is not in s&p500
-        if ticker not in historical_prices or ticker not in earning_announcement_times:
+        if ticker not in historical_prices:
             continue
         print(ticker)
 
@@ -274,14 +253,14 @@ def earning_data_to_feature_vectors(historical_prices, earning_announcement_time
 
             announcement_result = extract_announcement_result(date,
                                                               historical_prices[ticker],
-                                                              earning_announcement_times[ticker])
+                                                              earning_announcement[constants.ANNOUNCEMENT_TIME])
+
             if announcement_result is None:
-                continue   # No point in keeping this record
+                continue  # No point in keeping this record
             announcement_features = extract_announcement_features(ticker,
                                                                   date,
                                                                   historical_prices[ticker],
-                                                                  earning_announcements,
-                                                                  earning_announcement_times[ticker],
+                                                                  earning_announcement,
                                                                   company_sentiment,
                                                                   trends)
             if announcement_features is None:

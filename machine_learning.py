@@ -1,5 +1,5 @@
 import csv
-import statistics
+
 import numpy as np
 from sklearn import preprocessing
 from sklearn.linear_model import LogisticRegression
@@ -7,134 +7,126 @@ from sklearn.metrics import accuracy_score
 
 import constants
 import utilities
+from earning_announcements import earning_prediction
 
 
-def run_machine_learning(x_data, y_data, trades, simulation_year=constants.ML_SIMULATOR_YEAR):
-    if not constants.USE_CACHED_DATA:
-        # 1) Define data encoding - OneHotEncoder
-        if constants.VERBOSE:
-            print("Defining categories")
-        binary = [0, 1]
-        triary = [-1, 0, 1]
-        days = list(range(1, 32))
-        months = list(range(1, 13))
-        years = list(range(2014, 2020))
-        all_tickers = ["A", "AAL", "AAP", "AAPL", "ABBV", "ABC", "ABMD", "ABT", "ACN", "ADBE", "ADI", "ADM", "ADP",
-                       "ADS",
-                       "ADSK", "AEE", "AEP", "AES", "AFL", "AGN", "AIG", "AIV", "AIZ", "AJG", "AKAM", "ALB", "ALGN",
-                       "ALK",
-                       "ALL", "ALLE", "ALXN", "AMAT", "AMD", "AME", "AMG", "AMGN", "AMP", "AMT", "AMZN", "ANET", "ANSS",
-                       "ANTM", "AON", "AOS", "APA", "APC", "APD", "APH", "APTV", "ARE", "ARNC", "ATVI", "AVB", "AVGO",
-                       "AVY", "AWK", "AXP", "AZO", "BA", "BAC", "BAX", "BBT", "BBY", "BDX", "BEN", "BF-B", "BHF",
-                       "BHGE",
-                       "BIIB", "BK", "BKNG", "BLK", "BLL", "BMY", "BR", "BRK-B", "BSX", "BWA", "BXP", "C", "CAG", "CAH",
-                       "CAT", "CB", "CBOE", "CBRE", "CBS", "CCI", "CCL", "CDNS", "CE", "CELG", "CERN", "CF", "CFG",
-                       "CHD",
-                       "CHRW", "CHTR", "CI", "CINF", "CL", "CLX", "CMA", "CMCSA", "CME", "CMG", "CMI", "CMS", "CNC",
-                       "CNP",
-                       "COF", "COG", "COO", "COP", "COST", "COTY", "CPB", "CPRI", "CPRT", "CRM", "CSCO", "CSX", "CTAS",
-                       "CTL", "CTSH", "CTXS", "CVS", "CVX", "CXO", "D", "DAL", "DE", "DFS", "DG", "DGX", "DHI", "DHR",
-                       "DIS", "DISCA", "DISCK", "DISH", "DLR", "DLTR", "DOV", "DRE", "DRI", "DTE", "DUK", "DVA", "DVN",
-                       "DWDP", "DXC", "EA", "EBAY", "ECL", "ED", "EFX", "EIX", "EL", "EMN", "EMR", "EOG", "EQIX", "EQR",
-                       "ES", "ESS", "ETFC", "ETN", "ETR", "EVRG", "EW", "EXC", "EXPD", "EXPE", "EXR", "F", "FANG",
-                       "FAST",
-                       "FB", "FBHS", "FCX", "FDX", "FE", "FFIV", "FIS", "FISV", "FITB", "FL", "FLIR", "FLR", "FLS",
-                       "FLT",
-                       "FMC", "FOX", "FOXA", "FRC", "FRT", "FTI", "FTNT", "FTV", "GD", "GE", "GILD", "GIS", "GLW", "GM",
-                       "GOOG", "GOOGL", "GPC", "GPN", "GPS", "GRMN", "GS", "GT", "GWW", "HAL", "HAS", "HBAN", "HBI",
-                       "HCA",
-                       "HCP", "HD", "HES", "HFC", "HIG", "HII", "HLT", "HOG", "HOLX", "HON", "HP", "HPE", "HPQ", "HRB",
-                       "HRL", "HRS", "HSIC", "HST", "HSY", "HUM", "IBM", "ICE", "IDXX", "IFF", "ILMN", "INCY", "INFO",
-                       "INTC", "INTU", "IP", "IPG", "IPGP", "IQV", "IR", "IRM", "ISRG", "IT", "ITW", "IVZ", "JBHT",
-                       "JCI",
-                       "JEC", "JEF", "JKHY", "JNJ", "JNPR", "JPM", "JWN", "K", "KEY", "KEYS", "KHC", "KIM", "KLAC",
-                       "KMB",
-                       "KMI", "KMX", "KO", "KR", "KSS", "KSU", "L", "LB", "LEG", "LEN", "LH", "LIN", "LKQ", "LLL",
-                       "LLY",
-                       "LMT", "LNC", "LNT", "LOW", "LRCX", "LUV", "LW", "LYB", "M", "MA", "MAA", "MAC", "MAR", "MAS",
-                       "MAT",
-                       "MCD", "MCHP", "MCK", "MCO", "MDLZ", "MDT", "MET", "MGM", "MHK", "MKC", "MLM", "MMC", "MMM",
-                       "MNST",
-                       "MO", "MOS", "MPC", "MRK", "MRO", "MS", "MSCI", "MSFT", "MSI", "MTB", "MTD", "MU", "MXIM", "MYL",
-                       "NBL", "NCLH", "NDAQ", "NEE", "NEM", "NFLX", "NFX", "NI", "NKE", "NKTR", "NLSN", "NOC", "NOV",
-                       "NRG",
-                       "NSC", "NTAP", "NTRS", "NUE", "NVDA", "NWL", "NWS", "NWSA", "O", "OKE", "OMC", "ORCL", "ORLY",
-                       "OXY",
-                       "PAYX", "PBCT", "PCAR", "PEG", "PEP", "PFE", "PFG", "PG", "PGR", "PH", "PHM", "PKG", "PKI",
-                       "PLD",
-                       "PM", "PNC", "PNR", "PNW", "PPG", "PPL", "PRGO", "PRU", "PSA", "PSX", "PVH", "PWR", "PXD",
-                       "PYPL",
-                       "QCOM", "QRVO", "RCL", "RE", "REG", "REGN", "RF", "RHI", "RHT", "RJF", "RL", "RMD", "ROK", "ROL",
-                       "ROP", "ROST", "RSG", "RTN", "SBAC", "SBUX", "SCHW", "SEE", "SHW", "SIVB", "SJM", "SLB", "SLG",
-                       "SNA", "SNPS", "SO", "SPG", "SPGI", "SRE", "STI", "STT", "STX", "STZ", "SWK", "SWKS", "SYF",
-                       "SYK",
-                       "SYMC", "SYY", "T", "TAP", "TDG", "TEL", "TFX", "TGT", "TIF", "TJX", "TMK", "TMO", "TPR", "TRIP",
-                       "TROW", "TRV", "TSCO", "TSN", "TSS", "TTWO", "TWTR", "TXN", "TXT", "UA", "UAA", "UAL", "UDR",
-                       "UHS",
-                       "ULTA", "UNH", "UNM", "UNP", "UPS", "URI", "USB", "UTX", "V", "VAR", "VFC", "VIAB", "VLO", "VMC",
-                       "VNO", "VRSK", "VRSN", "VRTX", "VTR", "VZ", "WAT", "WBA", "WCG", "WDC", "WEC", "WELL", "WFC",
-                       "WHR",
-                       "WLTW", "WM", "WMB", "WMT", "WRK", "WU", "WY", "WYNN", "XEC", "XEL", "XLNX", "XOM", "XRAY",
-                       "XRX",
-                       "XYL", "YUM", "ZBH", "ZION", "ZTS", "Q", "EVHC", "UA-C", "AYI", "CSRA", "CMCSK", "SIG", "CPGX",
-                       "BXLT", "ENDP", "LVLT", "MNK", "NAVI", "GMCR", "GGP", "KORS", "RIG", "PCG", "SCG", "ESRX", "COL",
-                       "AET", "SRCL", "EQT", "CA", "ANDV", "XL", "DPS", "TWX", "RRC", "MON", "WYN", "PDCO", "CHK",
-                       "SNI",
-                       "BCR", "SPLS", "DD", "WFM", "AN", "BBBY", "MUR", "RAI", "YHOO", "TDC", "R", "MJN", "TGNA", "DNB",
-                       "SWN", "URBN", "FTR", "FSLR", "HAR", "LLTC", "PBI", "SE", "STJ", "OI", "LM", "DO", "HOT", "EMC",
-                       "GAS", "TE", "CVC", "CCE", "ARG", "TWC", "SNDK", "ADT", "GME", "THC", "CAM", "POM", "ESV", "CNX",
-                       "PCL", "PCP", "BRCM", "FOSL", "ALTR", "CSC", "SIAL", "GNW", "HCBK", "JOY", "HSP", "PLL", "DTV",
-                       "NE",
-                       "FDO", "KRFT", "ATI", "TEG", "QEP", "LO", "WIN", "DNR", "NBR", "AVP", "CFN", "PETM", "SWY",
-                       "COV",
-                       "BMS", "JBL", "BTU", "GHC", "RDC", "X", "FRX", "IGT", "LSI", "BEAM", "SLM", "CLF", "WPX", "LIFE",
-                       "ANF", "JDSU", "TER", "MOLX", "JCP", "NYX", "DELL", "SAI", "BMC", "S", "APOL", "FHN", "HNZ",
-                       "DF",
-                       "CVH", "PCS", "BIG"]
+def get_data(historical_prices, earning_announcement_data, company_sentiment, trends, store_processed_data):
+    print("Processing ML data")
+    x_table, y_table, trades = do_all_processing(historical_prices,
+                                                 earning_announcement_data,
+                                                 company_sentiment,
+                                                 trends)
+    encoded_x = do_encoding(x_table)
 
-        # Encode train values
-        if constants.VERBOSE:
-            print("Encoding data")
-        encoded_x = []
-        for i in range(len(x_data)):
-            # if i > 1000: continue
-            bin_1 = x_data[i][:4]
-            num_1 = x_data[i][4:6]
-            bin_2 = x_data[i][6]
-            num_2 = x_data[i][7]
-            # mix_1 = x_data[i][8:14]
-            mix_1 = x_data[i][8:13]
-            num_3 = x_data[i][14]
-            mix_2 = x_data[i][15:18]
-            num_4 = x_data[i][18:26]
+    if store_processed_data:
+        with open("models/ml_x.csv", "w", newline='') as my_csv:
+            writer = csv.writer(my_csv)
+            writer.writerows([["f1", "f2", "f3", "f4", "f5", "f6", "f7", "f8", "f9", "f10", "f11", "f12", "f13",
+                               "f14", "f15", "f16", "f17", "f18", "t1", "t2", "t3", "t4", "g1", "g2", "g3",
+                               "g4"]])
+            writer.writerows(x_table)
+        with open("models/ml_y.csv", "w", newline='') as my_csv:
+            writer = csv.writer(my_csv)
+            writer.writerows([["jump"]])
+            writer.writerows(y_table)
+        with open("models/ml_trade.csv", "w", newline='') as my_csv:
+            writer = csv.writer(my_csv)
+            writer.writerows([["profit_buy", "profit_buy_percentage"]])
+            writer.writerows(trades)
+        with open("models/ml_x_encoded.csv", "w", newline='') as my_csv:
+            writer = csv.writer(my_csv)
+            writer.writerows(encoded_x)
 
-            encoded_x.append(list(
-                preprocessing.OneHotEncoder(categories=[binary, binary, binary, binary]).fit_transform(
-                    [bin_1]).toarray()[
-                    0]) + list(num_1) +
-                             list(preprocessing.OneHotEncoder(categories=[binary]).fit_transform([[bin_2]]).toarray()[
-                                      0]) + list([num_2]) +
-                             list(preprocessing.OneHotEncoder(
-                                 # categories=[binary, binary, days, months, years, all_tickers]).fit_transform(
-                                 categories=[binary, binary, days, months, years]).fit_transform(
-                                 [mix_1]).toarray()[0]) + list([num_3]) +
-                             list(
-                                 preprocessing.OneHotEncoder(categories=[triary, triary, constants.DISCRETE_JUMPS]).fit_transform(
-                                     [mix_2]).toarray()[0]) + list(num_4))
-        if constants.STORE_CACHE:
-            with open("models/ml_x_encoded.csv", "w", newline='') as my_csv:
-                writer = csv.writer(my_csv)
-                writer.writerows(encoded_x)
+    return encoded_x, x_table, y_table, trades
+
+
+def do_encoding(x_data):
+    # 1) Define data encoding - OneHotEncoder
+    if constants.VERBOSE:
+        print("Defining categories")
+    binary = [0, 1]
+    triary = [-1, 0, 1]
+    days = list(range(1, 32))
+    months = list(range(1, 13))
+    years = list(range(2014, 2020))
+
+    # Encode X values
+    encoded_x = []
+    for i in range(len(x_data)):
+        # if i > 1000: continue
+        # print(x_data, end='\n')
+        bin_1 = x_data[i][:4]
+        num_1 = x_data[i][4:6]
+        bin_2 = x_data[i][6]
+        num_2 = x_data[i][7]
+        # mix_1 = x_data[i][8:14]
+        mix_1 = x_data[i][8:13]
+        num_3 = x_data[i][14]
+        mix_2 = x_data[i][15:18]
+        num_4 = x_data[i][18:26]
+
+        encoded_x.append(list(
+            preprocessing.OneHotEncoder(handle_unknown='ignore',
+                                        categories=[binary, binary, binary, binary]).fit_transform(
+                [bin_1]).toarray()[
+                0]) + list(num_1) +
+                         list(preprocessing.OneHotEncoder(handle_unknown='ignore', categories=[binary]).fit_transform(
+                             [[bin_2]]).toarray()[
+                                  0]) + list([num_2]) +
+                         list(preprocessing.OneHotEncoder(
+                             # categories=[binary, binary, days, months, years, all_tickers]).fit_transform(
+                             handle_unknown='ignore', categories=[binary, binary, days, months, years]).fit_transform(
+                             [mix_1]).toarray()[0]) + list([num_3]) +
+                         list(
+                             preprocessing.OneHotEncoder(
+                                 handle_unknown='ignore',
+                                 categories=[triary, triary, constants.DISCRETE_JUMPS]).fit_transform(
+                                 [mix_2]).toarray()[0]) + list(num_4))
+    return encoded_x
+
+
+def to_int_or_none(val):
+    if val is None or val == "":
+        return None
     else:
-        if constants.VERBOSE:
-            if constants.VERBOSE:
-                print("Reading cached data")
-        encoded_x = []
-        with open('models/ml_x_encoded.csv', 'r') as data:
-            reader = csv.reader(data)
-            for row in reader:
-                encoded_x.append([float(i) for i in row])
+        return int(val)
 
+
+def to_float_or_none(val):
+    if val is None or val == "":
+        return None
+    else:
+        return float(val)
+
+
+def get_cached_data():
+    print("Getting cached ML data")
+    with open('models/ml_x.csv', 'r') as my_csv:
+        next(my_csv, None)  # skip the headers
+        x_table = [[to_int_or_none(row[0]), to_int_or_none(row[1]), to_int_or_none(row[2]), to_int_or_none(row[3]),
+                    to_float_or_none(row[4]), to_float_or_none(row[5]),
+                    to_int_or_none(row[6]), to_float_or_none(row[7]), to_int_or_none(row[8]), to_int_or_none(row[9]),
+                    to_int_or_none(row[10]), to_int_or_none(row[11]),
+                    to_int_or_none(row[12]), row[13], to_float_or_none(row[14]), to_int_or_none(row[15]),
+                    to_int_or_none(row[16]), to_float_or_none(row[17]),
+                    to_int_or_none(row[18]), to_int_or_none(row[19]), to_int_or_none(row[20]), to_int_or_none(row[21]),
+                    to_float_or_none(row[22]), to_float_or_none(row[23]),
+                    to_float_or_none(row[24]), to_float_or_none(row[25])] for row in csv.reader(my_csv, delimiter=',')]
+    with open('models/ml_y.csv', 'r') as my_csv:
+        next(my_csv, None)  # skip the headers
+        y_table = [[int(row[0])] for row in csv.reader(my_csv, delimiter=',')]
+    with open('models/ml_trade.csv', 'r') as my_csv:
+        next(my_csv, None)  # skip the headers
+        trades = [[float(row[0]), float(row[1])] for row in csv.reader(my_csv, delimiter=',')]
+    with open('models/ml_x_encoded.csv', 'r') as data:
+        reader = csv.reader(data)
+        encoded_x = []
+        for row in reader:
+            encoded_x.append([float(i) for i in row])
+    return encoded_x, x_table, y_table, trades
+
+
+def run_machine_learning(encoded_x, x_data, y_data, trades, simulation_year):
     # 2) Create model from data
     if constants.VERBOSE:
         print("Creating model")
@@ -176,7 +168,8 @@ def run_machine_learning(x_data, y_data, trades, simulation_year=constants.ML_SI
         if constants.CLASSIFY_RESULTS:
             if constants.CERTAINTY_BASED_TRADES:
                 action = np.sign(constants.DISCRETE_JUMPS[res_value])
-                coef = np.abs(constants.DISCRETE_JUMPS[res_value])  # Multiply by 10 to ensure that numbers are not too small
+                coef = np.abs(
+                    constants.DISCRETE_JUMPS[res_value])  # Multiply by 10 to ensure that numbers are not too small
             else:
                 coef = 1
                 if constants.DISCRETE_JUMPS[res_value] > 0:
@@ -185,7 +178,6 @@ def run_machine_learning(x_data, y_data, trades, simulation_year=constants.ML_SI
                     action = constants.ORDER_SELL
                 else:
                     action = constants.ORDER_NONE
-
         else:
             if constants.PREDICTION_THRESHOLD != 0:
                 # If highest class is for at least threshold better than other classes then select it otherwise dont perform trade
@@ -203,7 +195,7 @@ def run_machine_learning(x_data, y_data, trades, simulation_year=constants.ML_SI
                 action = res_value
 
             if constants.CERTAINTY_BASED_TRADES:
-                coef = max(res_array)*10  # Multiply by 10 to ensure that numbers are not too small
+                coef = max(res_array) * 10  # Multiply by 10 to ensure that numbers are not too small
             else:
                 # Do a full trade
                 coef = 1
@@ -243,3 +235,51 @@ def run_machine_learning(x_data, y_data, trades, simulation_year=constants.ML_SI
     if constants.VERBOSE:
         print("Predictions:", prediction_results)
         print("Real results:", real_results)
+    return simulation_year, round(income, 3), round(income_percentage, 3)
+
+
+def do_all_processing(historical_prices, earning_announcement_data, company_sentiment, trends):
+    all_tickers = [*earning_announcement_data.keys()]
+    x_data = []
+    y_data = []
+    trades = []
+
+    for ticker in all_tickers:
+        for date, announcements in earning_announcement_data[ticker].items():
+
+            # TODO: try only BMO and AMC
+            #print("Event " + ticker + " " + date + " " + announcements[constants.ANNOUNCEMENT_TIME])
+            #if announcements[constants.ANNOUNCEMENT_TIME] != "bmo":
+                #print("Event " + ticker + " " + date)
+            #    continue
+            #else:
+            #    print("Event " + ticker + " " + date)
+
+            if ticker not in historical_prices or \
+                    utilities.get_closest_previous_date(date, [*historical_prices[ticker].keys()], 7) is None:
+                continue
+
+            # found an event for given date
+            features = earning_prediction.extract_announcement_features(ticker,
+                                                                        date,
+                                                                        historical_prices[ticker],
+                                                                        earning_announcement_data[ticker],
+                                                                        company_sentiment,
+                                                                        trends)
+            if features is None:
+                continue
+            result = earning_prediction.extract_announcement_result(date,
+                                                                    historical_prices[ticker],
+                                                                    announcements[constants.ANNOUNCEMENT_TIME])
+
+            after_date = utilities.get_after_announcement_date(date, historical_prices[ticker],
+                                                               announcements[constants.ANNOUNCEMENT_TIME])
+            profit_buy = historical_prices[ticker][after_date][constants.CLOSE] - historical_prices[ticker][after_date][
+                constants.OPEN]
+            profit_buy_percentage = profit_buy / historical_prices[ticker][after_date][constants.OPEN]
+
+            x_data.append(features)
+            y_data.append([result])
+            trades.append([profit_buy, profit_buy_percentage])
+
+    return x_data, y_data, trades

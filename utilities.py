@@ -64,95 +64,48 @@ def get_next_date(date, all_dates, n=1):
     return None
 
 
-def get_announcement_dates(date, prices, announcement_times):
-    announcement_date = get_closest_date(date, [*announcement_times.keys()], 14)
-    if announcement_date is None:  # if announcement was not found then assume --
-        if date in [*prices.keys()]:
-            return date, date
-        previous_market_date = get_closest_previous_date(date, [*prices.keys()], 7)
-        if previous_market_date is None:
-            return None, None
-        return previous_market_date, date
-
-    if announcement_times[announcement_date] == "--" and date == announcement_date and date in prices:
-        return date, date
-    if announcement_times[announcement_date] == "bmo" or \
-            announcement_times[announcement_date] == "--" and date < announcement_date:
-        if announcement_date not in [*prices.keys()]:
-            previous_market_date = get_closest_previous_date(announcement_date, [*prices.keys()], 7)
-            announcement_date = get_closest_next_date(announcement_date, [*prices.keys()], 7)
-        else:
-            previous_market_date = get_previous_date(announcement_date, [*prices.keys()], 7)
-
-        if previous_market_date is None or announcement_date is None:
-            return None, None
-        return previous_market_date, announcement_date
-    elif announcement_times[announcement_date] == "amc" or \
-            announcement_times[announcement_date] == "--" and announcement_date <= date:
-        if announcement_date not in [*prices.keys()]:
-            next_market_date = get_closest_next_date(announcement_date, [*prices.keys()], 7)
-            announcement_date = get_closest_previous_date(announcement_date, [*prices.keys()], 7)
-        else:
-
-            next_market_date = get_next_date(announcement_date, [*prices.keys()], 7)
-
-        if next_market_date is None or announcement_date is None:
-            return None, None
-
-        return announcement_date, next_market_date
-    else:
-        return None, None
-
-
-def get_announcement_jump(date, prices, announcement_times, type1, type2, use_percentage=False):
-    date1, date2 = get_announcement_dates(date, prices, announcement_times)
-    if date1 is None or date2 is None:
+def get_overnight_announcement_jump(date, prices, announcement_time):
+    # Get the jump on the night between announcement and market opening
+    # This calculates the announcement over night and not on the next trading day!
+    announcement_date = get_after_announcement_date(date, prices, announcement_time)
+    if announcement_date is None:
         return None
-    elif date1 == date2:
-        jump = prices[date1][type1] - prices[date2][type2]
-    else:
-        jump = prices[date2][type2] - prices[date1][type1]
+    previous_date = get_previous_date(announcement_date, [*prices.keys()], 7)
+    if previous_date is None:
+        return None
 
-    if use_percentage is None or use_percentage is False:
-        return jump
-    else:
-        return jump / prices[date1][type1]
+    jump = prices[announcement_date][constants.OPEN] - prices[previous_date][constants.CLOSE]
+    return jump / prices[previous_date][constants.CLOSE]
 
 
-def get_after_announcement_dates(date, prices, announcement_times):
+def get_announcement_jump(date, prices, announcement_time):
+    announcement_date = get_after_announcement_date(date, prices, announcement_time)
+    if announcement_date is None:
+        return None
+    return prices[announcement_date][constants.CLOSE] - prices[announcement_date][constants.OPEN]
+
+
+def get_after_announcement_date(date, prices, announcement_time):
     # BMO -> do trade next opening (same day)
     # AMC -> do trade next opening (next day)
-    # -- and time is before event date -> assume BMO
-    # -- and time is after event date -> assume AMC
-
-    announcement_date = get_closest_date(date, [*announcement_times.keys()], 14)
-    if announcement_date is None:  # if announcement was not found then assume --
-        next_market_date = get_next_date(date, [*prices.keys()], 7)
-        if next_market_date is None:
-            return None
-        return next_market_date
-    elif announcement_times[announcement_date] == "bmo" or \
-            announcement_times[announcement_date] == "--" and date < announcement_date:
-        if announcement_date in [*prices.keys()]:
-            return announcement_date
-        return get_closest_next_date(announcement_date, [*prices.keys()], 7)
-    elif announcement_times[announcement_date] == "amc" or \
-            announcement_times[announcement_date] == "--" and announcement_date <= date:
-        return get_next_date(announcement_date, [*prices.keys()], 7)
+    if announcement_time == "bmo":
+        if date in [*prices.keys()]:
+            return date
+        return get_closest_next_date(date, [*prices.keys()], 7)
     else:
-        return None
+        return get_next_date(date, [*prices.keys()], 7)
 
 
-def get_after_announcement_jump(date, prices, announcement_times, use_percentage=False):
-    announcement_date = get_after_announcement_dates(date, prices, announcement_times)
+def get_after_announcement_jump(date, prices, announcement_time, use_percentage=False):
+    announcement_date = get_after_announcement_date(date, prices, announcement_time)
     if announcement_date is None:
         return None
 
-    starting_date = get_closest_next_date(get_calendar_date(date, constants.JUMP_START), [*prices.keys()], 7)
+    starting_date = get_closest_next_date(get_calendar_date(announcement_date, constants.JUMP_START), [*prices.keys()], 7)
     if starting_date is None:
         return None
 
-    ending_date = get_closest_next_date(get_calendar_date(date, constants.JUMP_END), [*prices.keys()], 7)
+    ending_date = get_closest_next_date(get_calendar_date(announcement_date, constants.JUMP_END), [*prices.keys()], 7)
     if ending_date is None:
         return None
 

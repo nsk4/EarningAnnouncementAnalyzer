@@ -5,30 +5,27 @@ from dateutil import parser
 from dividend_declarations import dividend_prediction
 
 
-def get_data(load_cached):
-    if load_cached:
-        dividend_data = {}
-        directory = "samples/dividend declarations/"
-        for filename in os.listdir(directory):
-            ticker = filename.strip(".txt")
-            with open(directory + filename, "r") as ins:
-                next(ins)  # skip header row
-                for line in ins:
-                    row_splits = line.strip('\n').split(',')
-                    if row_splits[constants.EXDATE] == "--" or row_splits[constants.DECLARATION_DATE] == "--":
-                        continue
+def get_data():
+    dividend_data = {}
+    directory = "samples/dividend declarations/"
+    for filename in os.listdir(directory):
+        ticker = filename.strip(".txt")
+        with open(directory + filename, "r") as ins:
+            next(ins)  # skip header row
+            for line in ins:
+                row_splits = line.strip('\n').split(',')
+                if row_splits[constants.EXDATE] == "--" or row_splits[constants.DECLARATION_DATE] == "--":
+                    continue
 
-                    if ticker not in dividend_data:
-                        dividend_data[ticker] = {}
-                    exdate = (parser.parse(row_splits[constants.EXDATE])).strftime("%Y-%m-%d")
-                    declaration_date = (parser.parse(row_splits[constants.DECLARATION_DATE])).strftime("%Y-%m-%d")
-                    # if exdate == declaration_date:
-                    #    # This dividend is invalid for our analysis
-                    #    continue
-                    dividend_data[ticker][exdate] = (float(row_splits[constants.CASH_AMOUNT]), declaration_date)
-        return dividend_data
-    else:
-        raise Exception("Only cached data can be acquired directly, to download new one run scripts separately.")
+                if ticker not in dividend_data:
+                    dividend_data[ticker] = {}
+                exdate = (parser.parse(row_splits[constants.EXDATE])).strftime("%Y-%m-%d")
+                declaration_date = (parser.parse(row_splits[constants.DECLARATION_DATE])).strftime("%Y-%m-%d")
+                # if exdate == declaration_date:
+                #    # This dividend is invalid for our analysis
+                #    continue
+                dividend_data[ticker][exdate] = (float(row_splits[constants.CASH_AMOUNT]), declaration_date)
+    return dividend_data
 
 
 def process_dividend_announcements(historical_prices, dividend_data, store_processed_data):

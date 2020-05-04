@@ -1,14 +1,14 @@
-import constants
-from earning_announcements import earning_prediction
-import utilities
 import csv
 
+import constants
+import utilities
+from earning_announcements import earning_prediction
 
-def run_simulation(historical_prices, earning_announcement_times, earning_announcement_data, company_sentiment, trends):
-    # result = run_simulation(historical_prices, earning_announcement_times, earning_announcement_data)
-    # print("Final result:", result)
-    trades = prepare_simulation_data(historical_prices, earning_announcement_times,
-                                               earning_announcement_data, company_sentiment, trends)
+
+def run_simulation(historical_prices, earning_announcement_data, company_sentiment, trends):
+    #result = run_simulation(historical_prices, earning_announcement_data)
+    #print("Final result:", result)
+    trades = prepare_simulation_data(historical_prices, earning_announcement_data, company_sentiment, trends)
     with open("models/simulation_data.csv", "w", newline='') as my_csv:
         writer = csv.writer(my_csv)
         writer.writerows([["f1", "f2", "f3", "f4", "f5", "f6", "f7", "f8", "f9", "f10", "f11", "f12", "f13",
@@ -17,50 +17,7 @@ def run_simulation(historical_prices, earning_announcement_times, earning_announ
         writer.writerows(trades)
 
 
-def do_all_processing(historical_prices, earning_announcement_times, earning_announcement_data, company_sentiment, trends):
-    all_tickers = [*earning_announcement_data.keys()]
-    x_data = []
-    y_data = []
-    trades = []
-
-    for ticker in all_tickers:
-        for date in earning_announcement_data[ticker]:
-
-            if ticker not in historical_prices or \
-                    ticker not in earning_announcement_times or \
-                    ticker not in earning_announcement_data or \
-                    date not in earning_announcement_data[ticker] or \
-                    utilities.get_closest_previous_date(date, [*historical_prices[ticker].keys()], 7) is None:
-                continue
-
-            # found an event for given date
-            features = earning_prediction.extract_announcement_features(ticker,
-                                                                        date,
-                                                                        historical_prices[ticker],
-                                                                        earning_announcement_data[ticker],
-                                                                        earning_announcement_times[ticker],
-                                                                        company_sentiment,
-                                                                        trends)
-            if features is None:
-                continue
-            result = earning_prediction.extract_announcement_result(date,
-                                                                    historical_prices[ticker],
-                                                                    earning_announcement_times[ticker])
-
-            after_date = utilities.get_after_announcement_dates(date, historical_prices[ticker],
-                                                                earning_announcement_times[ticker])
-            profit_buy = historical_prices[ticker][after_date][constants.CLOSE] - historical_prices[ticker][after_date][
-                constants.OPEN]
-            profit_buy_percentage = profit_buy / historical_prices[ticker][after_date][constants.OPEN]
-
-            x_data.append(features)
-            y_data.append([result])
-            trades.append([profit_buy, profit_buy_percentage])
-
-    return x_data, y_data, trades
-
-
-def prepare_simulation_data(historical_prices, earning_announcement_times, earning_announcement_data, company_sentiment, trends):
+def prepare_simulation_data(historical_prices, earning_announcement_data, company_sentiment, trends):
     all_tickers = [*earning_announcement_data.keys()]
     trades = []
 
@@ -72,7 +29,6 @@ def prepare_simulation_data(historical_prices, earning_announcement_times, earni
         # process earning announcements
         for ticker in all_tickers:
             if ticker not in historical_prices or \
-                    ticker not in earning_announcement_times or \
                     ticker not in earning_announcement_data or \
                     date not in earning_announcement_data[ticker] or \
                     utilities.get_closest_previous_date(date, [*historical_prices[ticker].keys()], 7) is None:
@@ -83,12 +39,12 @@ def prepare_simulation_data(historical_prices, earning_announcement_times, earni
                                                                         date,
                                                                         historical_prices[ticker],
                                                                         earning_announcement_data[ticker],
-                                                                        earning_announcement_times[ticker],
                                                                         company_sentiment,
                                                                         trends)
 
-            after_date = utilities.get_after_announcement_dates(date, historical_prices[ticker],
-                                                                earning_announcement_times[ticker])
+            after_date = utilities.get_after_announcement_date(date, historical_prices[ticker],
+                                                               earning_announcement_data[ticker][date][
+                                                                   constants.ANNOUNCEMENT_TIME])
             profit_buy = historical_prices[ticker][after_date][constants.CLOSE] - historical_prices[ticker][after_date][
                 constants.OPEN]
             profit_buy_percentage = profit_buy / historical_prices[ticker][after_date][constants.OPEN]
@@ -98,7 +54,8 @@ def prepare_simulation_data(historical_prices, earning_announcement_times, earni
     return trades
 
 
-def run_simulation(historical_prices, earning_announcement_times, earning_announcement_data, company_sentimentm, trends):
+def do_simulation(historical_prices, earning_announcement_data, company_sentiment, trends):
+    # NOTE: Unfinished
     all_tickers = [*earning_announcement_data.keys()]
 
     trade_queue = {}
@@ -116,7 +73,6 @@ def run_simulation(historical_prices, earning_announcement_times, earning_announ
         # process earning announcements
         for ticker in all_tickers:
             if ticker not in historical_prices or \
-                    ticker not in earning_announcement_times or \
                     ticker not in earning_announcement_data or \
                     date not in earning_announcement_data[ticker] or \
                     utilities.get_closest_previous_date(date, [*historical_prices[ticker].keys()], 7) is None:
@@ -127,15 +83,15 @@ def run_simulation(historical_prices, earning_announcement_times, earning_announ
                                                                         date,
                                                                         historical_prices[ticker],
                                                                         earning_announcement_data[ticker],
-                                                                        earning_announcement_times[ticker],
-                                                                        company_sentimentm,
+                                                                        company_sentiment,
                                                                         trends)
 
             # TODO: run machine learning and get prediction
             result = features[16]
 
-            after_date = utilities.get_after_announcement_dates(date, historical_prices[ticker],
-                                                                earning_announcement_times[ticker])
+            after_date = utilities.get_after_announcement_date(date, historical_prices[ticker],
+                                                               earning_announcement_data[ticker][date][
+                                                                   constants.ANNOUNCEMENT_TIME])
             if result > 0:
                 if after_date not in trade_queue:
                     trade_queue[after_date] = []

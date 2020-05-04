@@ -1,43 +1,44 @@
-import os
 import csv
-from earning_announcements import earning_prediction
+import os
 from time import strptime
+
+import constants
 import utilities
+from earning_announcements import earning_prediction
 
 
-def get_data(load_cached):
-    if load_cached:
-        old_data = read_old_data()
-        new_data = read_new_data()
-        return {**old_data, **new_data}
-    else:
-        # TODO: read x and y table from file
-        pass
+def get_data():
+    old_data = read_old_data()
+    return old_data
+    #new_data = read_new_data()
+    #return {**old_data, **new_data}
+
+
+def store_data(x_table, y_table):
+    # TODO: make these columns auto generate from the number of feature vectors
+    with open("models/x_data_earning.csv", "w", newline='') as my_csv:
+        writer = csv.writer(my_csv)
+        writer.writerows([["f1", "f2", "f3", "f4", "f5", "f6", "f7", "f8", "f9", "f10", "f11", "f12", "f13",
+                           "f14", "f15", "f16", "f17", "f18", "t1", "t2", "t3", "t4", "g1", "g2", "g3", "g4"]])
+        writer.writerows(x_table)
+
+    with open("models/y_data_earning.csv", "w", newline='') as my_csv:
+        writer = csv.writer(my_csv)
+        writer.writerows([["jump"]])
+        writer.writerows(y_table)
 
 
 def process_earning_announcements(historical_prices,
-                                  earning_announcement_times,
                                   earning_announcement_data,
                                   company_sentiment,
                                   trends,
                                   store_processed_data):
     x_table, y_table = earning_prediction.earning_data_to_feature_vectors(historical_prices,
-                                                                          earning_announcement_times,
                                                                           earning_announcement_data,
                                                                           company_sentiment,
                                                                           trends)
-
-    if store_processed_data:  # 3. store earning announcement data
-        with open("models/x_data_earning.csv", "w", newline='') as my_csv:
-            writer = csv.writer(my_csv)
-            writer.writerows([["f1", "f2", "f3", "f4", "f5", "f6", "f7", "f8", "f9", "f10", "f11", "f12", "f13",
-                               "f14", "f15", "f16", "f17", "f18", "t1", "t2", "t3", "t4", "g1", "g2", "g3", "g4"]])
-            writer.writerows(x_table)
-
-        with open("models/y_data_earning.csv", "w", newline='') as my_csv:
-            writer = csv.writer(my_csv)
-            writer.writerows([["jump"]])
-            writer.writerows(y_table)
+    if store_processed_data:
+        store_data(x_table, y_table)
 
     return x_table, y_table
 
@@ -107,34 +108,32 @@ def read_old_data():
                                                            num_est,
                                                            eps,
                                                            surprise_percentage)
-    return merge_old_data(earning_announcement_times, earning_announcement_data)
 
-
-def get_announcement_time(date, announcement_times):
-    announcement_date = utilities.get_closest_date(date, [*announcement_times.keys()], 14)
-
-    if announcement_date is not None and announcement_times[announcement_date] == "bmo":
-        return "bmc"
-    else:
-        return "amc"
-
-
-def merge_old_data(earning_announcement_times, earning_announcement_data):
+    # Merge data
     arr = {}
-    for ticker, company_data in earning_announcement_data:
-        for date, data in company_data:
-            if date not in arr:
-                arr[date] = {}
-            if ticker not in arr[date]:
-                arr[date][ticker] = {}
+    for ticker, company_data in earning_announcement_data.items():
+        for date, data in company_data.items():
+            if ticker not in arr:
+                arr[ticker] = {}
+            if date not in arr[ticker]:
+                arr[ticker][date] = {}
 
             if ticker not in earning_announcement_times:
                 time = "amc"
             else:
                 time = get_announcement_time(date, earning_announcement_times[ticker])
 
-            arr[date][ticker] = (data[3], data[4], data[5], time)
+            arr[ticker][date] = (time, data[3], data[5], data[6])
     return arr
+
+
+def get_announcement_time(date, announcement_times):
+    announcement_date = utilities.get_closest_date(date, [*announcement_times.keys()], 14)
+
+    if announcement_date is not None and announcement_times[announcement_date] == "bmo":
+        return "bmo"
+    else:
+        return "amc"
 
 
 def read_new_data():
@@ -153,7 +152,7 @@ def read_new_data():
                 if row_splits[2] == "bmo":
                     time = "bmo"
                 else:
-                    time = "amo"
+                    time = "amc"
 
                 # estimated eps
                 if row_splits[3] == "-":
@@ -175,5 +174,5 @@ def read_new_data():
 
                 if ticker not in earning_announcement_data:
                     earning_announcement_data[ticker] = {}
-                earning_announcement_data[ticker][date] = (ticker, date, time, est_eps, eps, surprise_percentage)
+                earning_announcement_data[ticker][date] = (time, est_eps, eps, surprise_percentage)
     return earning_announcement_data
